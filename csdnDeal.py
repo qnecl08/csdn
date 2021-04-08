@@ -94,7 +94,6 @@ class csdnWatch(threading.Thread):
         time.sleep(2)
         btn = driver.find_element_by_id("vip_btn")
         btn.click()
-        driver.get("chrome://downloads/")
         fileName=self.findDownFileName(driver,path)
         if fileName==None:
             return None
@@ -111,7 +110,6 @@ class csdnWatch(threading.Thread):
             if el.get_attribute("data-href"):
                 el.click()
                 break
-        driver.get("chrome://downloads/")
         fileName=self.findDownFileName(driver,path)
         if fileName==None:
             return None
@@ -119,9 +117,10 @@ class csdnWatch(threading.Thread):
 
     def findDownFileName(self,driver ,path):
         driver.get("chrome://downloads/")
+        time.sleep(1)
         q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
         fileName = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
-        print(q)
+        print(fileName,"=",q)
         #下载文件
         r = requests.get(q, stream=True)
         # download started

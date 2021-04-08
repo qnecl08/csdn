@@ -24,16 +24,21 @@ class mailDeal(threading.Thread):
         self.appWatch=appWatch
     def watchMail(self):
         while 1:
-            time.sleep(5)
-            files=csdnDownDb.getFileToMail()
-            for file in files:
-                mailto_list = [file['mail']]
-                mail_title = file['file_name']
-                mail_content = file['file_name']
-                mm = Mailer(mailto_list, mail_title, mail_content,file['file_name'],file['path'])
-                res = mm.sendMail()
-                if res:
-                    csdnDownDb.updateFileStep(file['id'],1)
+            try:
+                time.sleep(5)
+                files=csdnDownDb.getFileToMail()
+                for file in files:
+                    print("开始发邮件",file)
+                    mailto_list = [file['mail']]
+                    mail_title = file['file_name']
+                    mail_content = file['file_name']
+                    mm = Mailer(mailto_list, mail_title, mail_content,file['file_name'],file['path'])
+                    res = mm.sendMail()
+                    print("邮件结果=",res)
+                    if res:
+                        csdnDownDb.updateFileStep(file['id'],1)
+            except Exception as e:
+                print(str(e))
 
 class Mailer(object):
     def __init__(self, maillist, mailtitle, mailcontent,fileName,path):
@@ -52,11 +57,11 @@ class Mailer(object):
 
         me = self.mail_user + "<" + self.mail_user + "@" + self.mail_postfix + ">"
         msg = MIMEMultipart()
-        msg['Subject'] = 'Python mail Test'
+        msg['Subject'] = self.mail_title
         msg['From'] = me
         msg['To'] = ";".join(self.mail_list)
 
-        puretext = MIMEText('纯文本内容' + self.mail_content)
+        puretext = MIMEText('蛋定龙淘宝店发送文件：' + self.mail_content)
         msg.attach(puretext)
         jpgpart = MIMEApplication(open(self.path+self.fileName, 'rb').read())
         jpgpart.add_header('Content-Disposition', 'attachment', filename=self.fileName)
@@ -72,3 +77,9 @@ class Mailer(object):
         except Exception as e:
             print(str(e))
         return False
+
+if __name__ == "__main__":
+    mail=mailDeal("")
+    mail.start()
+    while 1:
+        time.sleep(3)
