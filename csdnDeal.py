@@ -1,14 +1,13 @@
+import os
 import re
 import threading
+import time
 
-import os
+from selenium import webdriver
 
 import csdnDownDb
 import ipProxy
 import taobaoDb
-import time
-from selenium import webdriver
-from bs4 import BeautifulSoup
 
 
 class csdnWatch(threading.Thread):
@@ -31,16 +30,11 @@ class csdnWatch(threading.Thread):
             if len(orders)>0:
                 if csdnDownDb.hasCanUseAccount():
                     chromeOptions = webdriver.ChromeOptions()
-                    # prefs = {"profile.managed_default_content_settings.images": 2}
-                    # chromeOptions.add_experimental_option("prefs", prefs)
-                    path = os.getcwd() + "\\files"
+                    path = os.getcwd() + "\\files\\"
                     prefs = {"download.default_directory": path,"profile.managed_default_content_settings.images": 2}
                     chromeOptions.add_experimental_option("prefs", prefs)
-                    # PROXY = ipProxy.getIp()  # IP:PORT or HOST:PORT
-                    # PROXY = "101.81.52.97:28803"  # IP:PORT or HOST:PORT
-                    # print(PROXY)
-                    # # time.sleep(5)
-                    # chromeOptions.add_argument('--proxy-server=http://%s' % PROXY)
+                    PROXY = ipProxy.getIp()  # IP:PORT or HOST:PORT
+                    chromeOptions.add_argument('--proxy-server=http://%s' % PROXY)
                     driver = webdriver.Chrome(chrome_options=chromeOptions)
                     driver.maximize_window()  # 浏览器最大化
                     for order in orders:
@@ -62,20 +56,32 @@ class csdnWatch(threading.Thread):
                             download_top_t=driver.find_element_by_class_name("download_top_t")
                             srcFileName=download_top_t.find_element_by_tag_name("h3").get_attribute("title")
                             account=csdnDownDb.useAccount(score)
-                            if account==None:
+                            if account==None:#没有可用账号了
                                 continue
-                            self.login(driver,account)
+                            if self.login(driver,account)==0:
+                                continue
+                            time.sleep(1)
                             if account['account_type']=='vip':
-                                fileName=self.vipAccountDownFile(driver,remarkDeal['src_url'],srcFileName)
+                                fileName=self.vipAccountDownFile(driver,remarkDeal['src_url'],path)
                             else:
-                                fileName =self.normalAccountDownFile(driver,remarkDeal['src_url'],srcFileName)
-                            print("fileName=",fileName)
+                                fileName =self.normalAccountDownFile(driver,remarkDeal['src_url'],path)
+                            if fileName==None:#下载失败
+                                taobaoDb.updateStepOrder(order['order_no'],8)
+                                continue
+                            input={}
+                            input['file_name']=fileName
+                            input['mail']=remarkDeal['mail']
+                            input['src_url']=remarkDeal['src_url']
+                            input['path']=path
+                            input['csdn_account']=account['account']
+                            input['order_no']=order['order_no']
+                            fileId=csdnDownDb.insertFile(input)
+                            taobaoDb.updateStepOrder(order['order_no'],2)
                         except Exception as e:
                             print(str(e))
                             pass
                     driver.quit()
-    def vipAccountDownFile(self,driver,src_url,srcFileName):
-        result={}
+    def vipAccountDownFile(self,driver,src_url,path):
         driver.get(src_url)
         time.sleep(1)
         driver.find_element_by_class_name("direct_download").click()
@@ -83,24 +89,13 @@ class csdnWatch(threading.Thread):
         btn = driver.find_element_by_id("vip_btn")
         btn.click()
         driver.get("chrome://downloads/")
-        title_areas=driver.find_elements_by_class_name("title-area")
-        downArea={}
-        for area in title_areas:
-            if srcFileName in area.find_element_by_tag_name("a").text:
-                downArea=area
-                result['fileName']=area.find_element_by_tag_name("a").text
-                break
-        times=500
-        while 1:
-            if downArea.find_element_by_id("show"):
-                return result
-            times-=1
-            if time<0:
-                return None
+        fileName=self.findDownFileName(driver,path)
+        if fileName==None:
+            return None
+        return fileName
 
 
-    def normalAccountDownFile(self,driver,src_url,srcFileName):
-        result={}
+    def normalAccountDownFile(self,driver,src_url,path):
         driver.get(src_url)
         time.sleep(1)
         driver.find_element_by_class_name("direct_download").click()
@@ -111,28 +106,56 @@ class csdnWatch(threading.Thread):
                 el.click()
                 break
         driver.get("chrome://downloads/")
+        fileName=self.findDownFileName(driver,path)
+        if fileName==None:
+            return None
+        return fileName
 
-        times=500
+    def findDownFileName(self,driver ,path):
+
+        driver.get("chrome://downloads/")
+        q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
+        driver.quit()
+        print(q)
+        return q
+        lastFile=csdnDownDb.lastInsertFile()
+        if lastFile==None:
+            lastCreateTime=0
+        else:
+            lastCreateTime=lastFile['create_time']
+        times = 3
         while 1:
-            soup=BeautifulSoup(driver.page_source,"html.parser")
-            title_areas=soup.find_all(id="title-area")
-            for area in title_areas:
-                a=area.find("a")
-                if srcFileName in a.string:
-                    result['fileName']=a.string
-                    if area.find(id="show"):
-                        return result
-            times-=1
-            if times<0:
+            iterms = os.listdir(path)
+            m_time = 0
+            fileName = ""
+            for item in iterms:
+                stat = os.stat(path + "/" + item)
+                if stat.st_mtime > lastCreateTime:
+                    fileName = item
+                    if ".crdownload" not in fileName:
+                        return fileName
+                    break
+            if fileName=="":
+                times-=1
+            if times < 0:
                 return None
-            time.sleep(1)
+            time.sleep(5)
+
+
     def login(self,driver,account):
         url = 'https://passport.csdn.net/account/login'
         driver.get(url)
         driver.find_element_by_id('username').send_keys(account['account'])
         driver.find_element_by_id('password').send_keys(account['password'])
         driver.find_element_by_class_name("logging").click()
-        time.sleep(2)
+        times=3
+        while 1:
+            if "www.csdn.net" in driver.current_url:
+                return 1
+            times-=1
+            if times<0:
+                return 0
+            time.sleep(3)
 
     # driver.get("https://download.csdn.net/my")
     # datas = driver.find_element_by_class_name("datas")
@@ -158,6 +181,7 @@ class csdnWatch(threading.Thread):
 
 if __name__ == "__main__":
     t=csdnWatch("")
+    # t.findDownFileName("./files")
     t.start()
     while 1:
         time.sleep(3)
