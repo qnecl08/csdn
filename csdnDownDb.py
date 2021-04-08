@@ -36,21 +36,22 @@ def updateAccountScore(account,score):
     sql="update csdn_account set score=%s where account=%s"
     cursor.execute(sql,[score,account])
 
-#获取最后插入的文件
-def lastInsertFile():
-    sql="select * from csdn_download order by id DESC limit 0,1"
-    cursor.execute(sql)
-    files=cursor.fetchall()
-    if len(files)>0:
-        return files[0]
-    else:
-        return None
+
 #新下载成功的文件
 def insertFile(input):
     sql="insert into csdn_download (file_name,mail,src_url,path,csdn_account,order_no,step,create_time)VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
     cursor.execute(sql,[input['file_name'],input['mail'],input['src_url'],input['path'],input['csdn_account'],input['order_no'],0,str(int(time.time()))])
     return cursor.lastrowid
 
+def getFileToMail():
+    sql="select * from csdn_download where step=0"
+    cursor.execute(sql)
+    files=cursor.fetchall()
+    return files
+
+def updateFileStep(id,step):
+    sql="update csdn_download set step=%s where id=%s"
+    cursor.execute(sql,[step,id])
 if __name__ == "__main__":
    print(useAccount(2))
 

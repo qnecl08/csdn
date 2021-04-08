@@ -29,21 +29,22 @@ class csdnWatch(threading.Thread):
             time.sleep(5)
             orders=taobaoDb.notDealOrder()
             if len(orders)>0:
+                # PROXY = ipProxy.getIp()  # IP:PORT or HOST:PORT
                 if csdnDownDb.hasCanUseAccount():
-                    chromeOptions = webdriver.ChromeOptions()
-                    path = os.getcwd() + "\\files\\"
-                    prefs = {"download.default_directory": path,"profile.managed_default_content_settings.images": 2}
-                    chromeOptions.add_experimental_option("prefs", prefs)
-                    PROXY = ipProxy.getIp()  # IP:PORT or HOST:PORT
-                    chromeOptions.add_argument('--proxy-server=http://%s' % PROXY)
-                    driver = webdriver.Chrome(chrome_options=chromeOptions)
-                    driver.maximize_window()  # 浏览器最大化
                     for order in orders:
+                        chromeOptions = webdriver.ChromeOptions()
+                        path = os.getcwd() + "\\files\\"
+                        prefs = {"download.default_directory": path,
+                                 "profile.managed_default_content_settings.images": 2}
+                        chromeOptions.add_experimental_option("prefs", prefs)
+                        # chromeOptions.add_argument('--proxy-server=http://%s' % PROXY)
+                        driver = webdriver.Chrome(chrome_options=chromeOptions)
                         # taobaoDb.updateStepOrder(order['order_no'],1)
                         try:
                             remarkDeal=self.dealRemark(order['remark'])
                             if remarkDeal==None:
                                 taobaoDb.updateStepOrder(order['order_no'],9)
+                                driver.quit()
                                 continue
 
                             driver.get(remarkDeal['src_url'])
@@ -58,8 +59,10 @@ class csdnWatch(threading.Thread):
                             srcFileName=download_top_t.find_element_by_tag_name("h3").get_attribute("title")
                             account=csdnDownDb.useAccount(score)
                             if account==None:#没有可用账号了
+                                driver.quit()
                                 continue
                             if self.login(driver,account)==0:
+                                driver.quit()
                                 continue
                             time.sleep(1)
                             if account['account_type']=='vip':
@@ -68,6 +71,7 @@ class csdnWatch(threading.Thread):
                                 fileName =self.normalAccountDownFile(driver,remarkDeal['src_url'],path)
                             if fileName==None:#下载失败
                                 taobaoDb.updateStepOrder(order['order_no'],8)
+                                driver.quit()
                                 continue
                             input={}
                             input['file_name']=fileName
@@ -78,10 +82,11 @@ class csdnWatch(threading.Thread):
                             input['order_no']=order['order_no']
                             fileId=csdnDownDb.insertFile(input)
                             taobaoDb.updateStepOrder(order['order_no'],2)
+                            driver.quit()
                         except Exception as e:
                             print(str(e))
+                            driver.quit()
                             pass
-                    driver.quit()
     def vipAccountDownFile(self,driver,src_url,path):
         driver.get(src_url)
         time.sleep(1)
@@ -113,7 +118,6 @@ class csdnWatch(threading.Thread):
         return fileName
 
     def findDownFileName(self,driver ,path):
-
         driver.get("chrome://downloads/")
         q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
         fileName = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
@@ -126,29 +130,6 @@ class csdnWatch(threading.Thread):
                 if chunk:
                     f.write(chunk)
         return fileName
-        return q
-        lastFile=csdnDownDb.lastInsertFile()
-        if lastFile==None:
-            lastCreateTime=0
-        else:
-            lastCreateTime=lastFile['create_time']
-        times = 3
-        while 1:
-            iterms = os.listdir(path)
-            m_time = 0
-            fileName = ""
-            for item in iterms:
-                stat = os.stat(path + "/" + item)
-                if stat.st_mtime > lastCreateTime:
-                    fileName = item
-                    if ".crdownload" not in fileName:
-                        return fileName
-                    break
-            if fileName=="":
-                times-=1
-            if times < 0:
-                return None
-            time.sleep(5)
 
 
     def login(self,driver,account):
