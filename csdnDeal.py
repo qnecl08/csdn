@@ -3,6 +3,7 @@ import re
 import threading
 import time
 
+import requests
 from selenium import webdriver
 
 import csdnDownDb
@@ -115,8 +116,16 @@ class csdnWatch(threading.Thread):
 
         driver.get("chrome://downloads/")
         q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
-        driver.quit()
+        fileName = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
         print(q)
+        #下载文件
+        r = requests.get(q, stream=True)
+        # download started
+        with open("./files/downloads/"+fileName, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+        return fileName
         return q
         lastFile=csdnDownDb.lastInsertFile()
         if lastFile==None:

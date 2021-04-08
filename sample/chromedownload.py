@@ -20,6 +20,7 @@ driver.get("https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-5.7.21-winx64.zip")
 
 driver.get("chrome://downloads/")
 q=driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
+fileName=driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
 
 def compare(x, y):
     stat_x = os.stat(path + "/" + x)
