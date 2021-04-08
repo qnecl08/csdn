@@ -34,8 +34,8 @@ class taobaoOrderWatch(threading.Thread):
             print("new round")
             time.sleep(3)
             try:
-                # driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm?action=itemlist/SoldQueryAction&event_submit_do_query=1&auctionStatus=PAID&tabCode=waitSend")
-                driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm")
+                driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm?action=itemlist/SoldQueryAction&event_submit_do_query=1&auctionStatus=PAID&tabCode=waitSend")
+                # driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm")
                 time.sleep(1)
                 orders = driver.find_elements_by_class_name("trade-order-main")
                 for order in orders:
