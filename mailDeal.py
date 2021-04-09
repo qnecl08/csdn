@@ -71,6 +71,7 @@ class mailDeal(threading.Thread):
                         if pv1:
                             csdnDownDb.updateFileStep(file['id'],1)
                             print("发邮件成功",file)
+                            self.appWatch.mailSendCount+=1
                             break
                         try:
                             msgbox = driver.find_element_by_class_name("nui-msgbox-title")

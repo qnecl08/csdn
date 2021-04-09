@@ -47,6 +47,7 @@ class csdnWatch(threading.Thread):
                                 driver.quit()
                                 continue
 
+                            self.appWatch.effectOrderCount+=1
                             driver.get(remarkDeal['src_url'])
                             #获取资源积分
                             download_top=driver.find_element_by_id("download_top")
@@ -89,6 +90,10 @@ class csdnWatch(threading.Thread):
                                 print("插入数据库文件--")
                                 taobaoDb.updateStepOrder(order['order_no'],2)
                                 csdnDownDb.updateAccountScore(account['account'],score)
+                                self.appWatch.downLoadCount+=1
+                            else:
+                                self.appWatch.effectOrderCount-=1
+
                         except Exception as e:
                             print("异常：",str(e))
                             driver.quit()
