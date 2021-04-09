@@ -26,6 +26,7 @@ class mailDeal(threading.Thread):
         threading.Thread.__init__(self)
         self.appWatch=appWatch
     def watchMail(self):
+        refreshTimes=0
         obj = pickle.load(open("./mail163" + ".txt", "rb+"))
         print(obj)
         chrome_options = webdriver.ChromeOptions()
@@ -80,7 +81,11 @@ class mailDeal(threading.Thread):
                         if msgbox:
                             print("发送失败")
                             break
-                driver.refresh()
+                if refreshTimes>60:
+                    driver.refresh()
+                    refreshTimes=0
+                else:
+                    refreshTimes+=5
                 cookies = driver.get_cookies()
                 byte_data = pickle.dump(cookies, open("./mail163" + ".txt", "wb+"))
                 time.sleep(5)
