@@ -33,8 +33,8 @@ def hasCanUseAccount():
 
 #更新账号积分
 def updateAccountScore(account,score):
-    sql="update csdn_account set score=%s where account=%s"
-    cursor.execute(sql,[score,account])
+    sql="update csdn_account set score=score-"+score+" where account=%s"
+    cursor.execute(sql,[account])
 
 
 #新下载成功的文件
@@ -52,6 +52,7 @@ def getFileToMail():
 def updateFileStep(id,step):
     sql="update csdn_download set step=%s where id=%s"
     cursor.execute(sql,[step,id])
+
 if __name__ == "__main__":
    print(useAccount(2))
 

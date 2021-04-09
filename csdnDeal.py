@@ -24,6 +24,7 @@ class csdnWatch(threading.Thread):
     def __init__(self,appWatch):
         threading.Thread.__init__(self)
         self.appWatch=appWatch
+        self.path = os.getcwd() + "\\files\\"
     def watchChrome(self):
         while 1:
             time.sleep(5)
@@ -33,8 +34,7 @@ class csdnWatch(threading.Thread):
                 if csdnDownDb.hasCanUseAccount():
                     for order in orders:
                         chromeOptions = webdriver.ChromeOptions()
-                        path = os.getcwd() + "\\files\\"
-                        prefs = {"download.default_directory": path,
+                        prefs = {"download.default_directory": self.path+"downloads",
                                  "profile.managed_default_content_settings.images": 2}
                         chromeOptions.add_experimental_option("prefs", prefs)
                         # chromeOptions.add_argument('--proxy-server=http://%s' % PROXY)
@@ -66,41 +66,47 @@ class csdnWatch(threading.Thread):
                                 continue
                             time.sleep(1)
                             if account['account_type']=='vip':
-                                fileName=self.vipAccountDownFile(driver,remarkDeal['src_url'],path)
+                                fileArr=self.vipAccountDownFile(driver,remarkDeal['src_url'])
+                                print("获得下载文件",fileArr)
                             else:
-                                fileName =self.normalAccountDownFile(driver,remarkDeal['src_url'],path)
-                            if fileName==None:#下载失败
+                                fileArr =self.normalAccountDownFile(driver,remarkDeal['src_url'])
+                                print("获得下载文件",fileArr)
+                            if fileArr==None:#下载失败
                                 taobaoDb.updateStepOrder(order['order_no'],8)
                                 driver.quit()
+                                print("下载文件失败",fileArr)
                                 continue
-                            input={}
-                            input['file_name']=fileName
-                            input['mail']=remarkDeal['mail']
-                            input['src_url']=remarkDeal['src_url']
-                            input['path']=path
-                            input['csdn_account']=account['account']
-                            input['order_no']=order['order_no']
-                            fileId=csdnDownDb.insertFile(input)
-                            taobaoDb.updateStepOrder(order['order_no'],2)
                             driver.quit()
+                            if self.downloadFile(fileArr):
+                                input={}
+                                input['file_name']=fileArr['fileName']
+                                input['mail']=remarkDeal['mail']
+                                input['src_url']=remarkDeal['src_url']
+                                input['path']=self.path
+                                input['csdn_account']=account['account']
+                                input['order_no']=order['order_no']
+                                fileId=csdnDownDb.insertFile(input)
+                                print("插入数据库文件--")
+                                taobaoDb.updateStepOrder(order['order_no'],2)
+                                csdnDownDb.updateAccountScore(account['account'],score)
                         except Exception as e:
-                            print(str(e))
+                            print("异常：",str(e))
                             driver.quit()
                             pass
-    def vipAccountDownFile(self,driver,src_url,path):
+    def vipAccountDownFile(self,driver,src_url):
         driver.get(src_url)
         time.sleep(1)
         driver.find_element_by_class_name("direct_download").click()
         time.sleep(2)
         btn = driver.find_element_by_id("vip_btn")
         btn.click()
-        fileName=self.findDownFileName(driver,path)
+        fileName=self.findDownFileName(driver)
         if fileName==None:
             return None
         return fileName
 
 
-    def normalAccountDownFile(self,driver,src_url,path):
+    def normalAccountDownFile(self,driver,src_url):
         driver.get(src_url)
         time.sleep(1)
         driver.find_element_by_class_name("direct_download").click()
@@ -110,25 +116,38 @@ class csdnWatch(threading.Thread):
             if el.get_attribute("data-href"):
                 el.click()
                 break
-        fileName=self.findDownFileName(driver,path)
+        fileName=self.findDownFileName(driver)
         if fileName==None:
             return None
         return fileName
 
-    def findDownFileName(self,driver ,path):
+    def findDownFileName(self,driver ):
+        result={}
         driver.get("chrome://downloads/")
         time.sleep(1)
-        q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
-        fileName = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
-        print(fileName,"=",q)
+        times=3
+        while 1:
+            q = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#file-link")[0].href;')
+            fileName = driver.execute_script('return document.getElementsByTagName("downloads-manager")[0].shadowRoot.children["downloads-list"]._physicalItems[0].content.querySelectorAll("#name")[0].innerHTML;')
+            print(fileName,"=",q)
+            if q:
+                if fileName:
+                    result['q']=q
+                    result['fileName']=fileName
+                    return result
+            times-=1
+            if times<0:
+                return None
+            time.sleep(2)
         #下载文件
-        r = requests.get(q, stream=True)
+    def downloadFile(self,fileArr):
+        r = requests.get(fileArr['q'], stream=True)
         # download started
-        with open("./files/downloads/"+fileName, 'wb') as f:
+        with open(self.path+fileArr['fileName'], 'wb') as f:
             for chunk in r.iter_content(chunk_size=1024 * 1024):
                 if chunk:
                     f.write(chunk)
-        return fileName
+        return True
 
 
     def login(self,driver,account):
@@ -154,11 +173,12 @@ class csdnWatch(threading.Thread):
 
     def dealRemark(self,remark):
         result={}
-        searchObj = re.search('([A-Za-z0-9\u4e00-\u9fa5]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+)', remark)
+        searchObj = re.search('[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+', remark)
+        # searchObj = re.search('([A-Za-z0-9_]+@[a-zA-Z0-9_-]+(\.[a-zA-Z0-9_-]+)+)', remark)
 
         searchObj2 = re.search('(download.csdn.net/download/.*?/\\d+)', remark)
         if searchObj:
-            result["mail"]=searchObj.group(1)
+            result["mail"]=searchObj.group()
         else:
             return None
         if searchObj2:

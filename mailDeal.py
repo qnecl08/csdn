@@ -43,6 +43,7 @@ class mailDeal(threading.Thread):
             try:
                 time.sleep(1)
                 files=csdnDownDb.getFileToMail()
+                print("发邮件列表",files)
                 for file in files:
                     driver.get("https://mail.163.com/js6/main.jsp")
                     btnLogout = driver.find_element_by_id("btnLogout")
@@ -69,6 +70,7 @@ class mailDeal(threading.Thread):
                             pass
                         if pv1:
                             csdnDownDb.updateFileStep(file['id'],1)
+                            print("发邮件成功",file)
                             break
                         try:
                             msgbox = driver.find_element_by_class_name("nui-msgbox-title")
@@ -80,10 +82,9 @@ class mailDeal(threading.Thread):
                 driver.refresh()
                 cookies = driver.get_cookies()
                 byte_data = pickle.dump(cookies, open("./mail163" + ".txt", "wb+"))
-                driver.quit()
                 time.sleep(5)
             except Exception as e:
-                print(str(e))
+                print("发邮件异常",str(e))
 
 
 
