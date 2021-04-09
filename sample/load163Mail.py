@@ -27,16 +27,28 @@ time.sleep(3)
 by0=driver.find_element_by_class_name("by0")
 input=by0.find_element_by_tag_name("input")
 input.send_keys("E:\code\python\csdn\sample\mail163.txt")
-input.send_keys("E:\code\python\csdn\sample\\taobao.txt")
+input.send_keys("E:\download\go1.10.windows-amd64.msi")
 nui=driver.find_element_by_class_name("nui-editableAddr-ipt")
 nui.send_keys("342219728@qq.com")
 mainBtn=driver.find_element_by_class_name("nui-mainBtn")
 mainBtn.click()
-
+pv1=""
+msgbox=""
 while 1:
     time.sleep(3)
-    pv1=driver.find_element_by_class_name("pv1")
+    try:
+        pv1=driver.find_element_by_class_name("pv1")
+    except Exception:
+        pass
     if pv1:
+        print("发送成功")
+        break
+    try:
+        msgbox=driver.find_element_by_class_name("nui-msgbox-title")
+    except Exception:
+        pass
+    if msgbox:
+        print("发送失败")
         break
 
 cookies=driver.get_cookies()
