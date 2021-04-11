@@ -1,5 +1,7 @@
 import pickle
 import threading
+
+import appWatch
 import taobaoDb
 import time
 from selenium import webdriver
@@ -18,17 +20,25 @@ class taobaoOrderWatch(threading.Thread):
         threading.Thread.__init__(self)
         self.appWatch=appWatch
     def watchChrome(self):
-        obj = pickle.load(open("./taobao" + ".txt", "rb+"))
-        print(obj)
+        obj = pickle.load(open("./files/cookies/taobao.txt", "rb+"))
         chrome_options = webdriver.ChromeOptions()
         driver = webdriver.Chrome()
         driver.maximize_window()  # 浏览器最大化
         url = 'https://www.taobao.com'
         driver.get(url)
-        time.sleep(2)
         for cookie in obj:
             driver.add_cookie(cookie)
+        driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm?action=itemlist/SoldQueryAction&event_submit_do_query=1&auctionStatus=PAID&tabCode=waitSend")
         time.sleep(2)
+        if "member/login.jhtml" in driver.current_url:
+            while 1:
+                time.sleep(2)
+                if "member/login.jhtml" in driver.current_url:
+                    pass
+                else:
+                    break
+        cookies = driver.get_cookies()
+        byte_data = pickle.dump(cookies, open("./files/cookies/taobao.txt", "wb+"))
         driver.get("https://trade.taobao.com/trade/itemlist/list_sold_items.htm?action=itemlist/SoldQueryAction&event_submit_do_query=1&auctionStatus=PAID&tabCode=waitSend")
         while 1:
             print("new round")
@@ -65,12 +75,18 @@ class taobaoOrderWatch(threading.Thread):
                         time.sleep(2)
                         driver.back()
                 cookies = driver.get_cookies()
-                pickle.dump(cookies, open("./taobao" + ".txt", "wb+"))
+                pickle.dump(cookies, open("./files/cookies/taobao.txt", "wb+"))
             except Exception as e:
                 print(str(e))
 
 
 
+if __name__ == "__main__":
+    appwatch=appWatch.SelfWatch()
+    t=taobaoOrderWatch(appwatch)
+    t.start()
+    while 1:
+        time.sleep(3)
 
 
 

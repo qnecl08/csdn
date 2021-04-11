@@ -24,13 +24,6 @@ cookies=driver.get_cookies()
 session = requests.Session()
 for cookie in cookies:
     session.cookies.set(cookie['name'], cookie['value'])
-headers = {'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-               'Accept-Encoding': 'gzip, deflate, sdch, br',
-               'Accept-Language': 'zh-CN,zh;q=0.8',
-               'Connection': 'keep-alive',
-               'Host': 'pan.baidu.com',
-               'Upgrade-Insecure-Requests': '1',
-               'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.146 Safari/537.36'}
 
 url = "https://download.csdn.net/download/vanridin/10105089"
 resp=session.get(url)

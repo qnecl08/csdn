@@ -8,7 +8,6 @@ def getIp():
     print(proxies)
     try:
         resp2=requests.get("http://www.ip138.com/", proxies=proxies)
-        print(resp2.text)
         return resp.text
     except Exception as e:
         return getIp()
