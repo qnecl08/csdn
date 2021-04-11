@@ -61,6 +61,12 @@ def updateFileStep(id,step):
     sql="update csdn_download set step=%s where id=%s"
     cursor.execute(sql,[step,id])
 
+#更细下载次数
+def updateTodayTimes():
+    sql="update csdn_account set today_download_times=0"
+    cursor.execute(sql)
+
+
 if __name__ == "__main__":
    print(useAccount(2))
 

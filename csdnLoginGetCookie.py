@@ -7,6 +7,7 @@ import time
 from selenium import webdriver
 
 class csdnLogin(threading.Thread):
+    lasttime=time.strftime("%Y-%m-%d", time.localtime())
     def run(self):  # 定义每个线程要运行的函数
         try:
             while 1:
@@ -46,8 +47,12 @@ class csdnLogin(threading.Thread):
                     time.sleep(1)
             except Exception as e:
                 print("异常",str(e))
-            time.sleep(60*5)
-
+                driver.quit()
+            self.todayTimesToZero()
+            time.sleep(60*10)
+    def todayTimesToZero(self):
+        if self.lasttime!=time.strftime("%Y-%m-%d", time.localtime()) :
+            csdnDownDb.updateTodayTimes()
 
 if __name__ == "__main__":
     t=csdnLogin()
